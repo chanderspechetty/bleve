@@ -1033,6 +1033,74 @@ func TestKeywordSearchBug207(t *testing.T) {
 	}
 }
 
+
+func TestKeywordSearchBug(t *testing.T) {
+	defer func() {
+		err := os.RemoveAll("testidx")
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	f := NewTextFieldMapping()
+	f.Analyzer = keyword_analyzer.Name
+
+	m := NewIndexMapping()
+	m.DefaultMapping = NewDocumentMapping()
+	m.DefaultMapping.AddFieldMappingsAt("Body", f)
+
+	index, err := New("testidx", m)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	doc1 := struct {
+		Body string
+	}{
+		Body: "Texas Wings",
+	}
+
+	err = index.Index("a", doc1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	doc2 := struct {
+		Body string
+	}{
+		Body: "Texas Roadstar",
+	}
+
+	err = index.Index("b", doc2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// now search for these terms
+	sreq := NewSearchRequest(NewTermQuery("Texas Wings").SetField("Body"))
+	sres, err := index.Search(sreq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sres.Total != 1 {
+		t.Errorf("expected 1 result, got %d", sres.Total)
+	}
+
+	sreq = NewSearchRequest(NewTermQuery("Texas Roadstar").SetField("Body"))
+	sres, err = index.Search(sreq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sres.Total != 1 {
+		t.Errorf("expected 1 result, got %d", sres.Total)
+	}
+
+	err = index.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestTermVectorArrayPositions(t *testing.T) {
 	defer func() {
 		err := os.RemoveAll("testidx")
